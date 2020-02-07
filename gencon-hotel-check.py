@@ -8,7 +8,7 @@ from re import compile as reCompile, IGNORECASE as RE_IGNORECASE
 from ssl import create_default_context as create_ssl_context, CERT_NONE, SSLError
 from sys import stdout, version_info
 from threading import Thread
-from time import sleep
+from time import sleep 
 
 if version_info < (2, 7, 9):
 	print("Requires Python 2.7.9+")
@@ -132,6 +132,7 @@ group.add_argument('--popup', dest = 'alerts', action = 'append_const', const = 
 group.add_argument('--cmd', dest = 'alerts', action = 'append', type = lambda arg: ('cmd', arg), metavar = 'CMD', help = 'run the specified command, passing each hotel name as an argument')
 group.add_argument('--browser', dest = 'alerts', action = 'append_const', const = ('browser',), help = 'open the Passkey website in the default browser')
 group.add_argument('--email', dest = 'alerts', action = EmailAction, nargs = 3, metavar = ('HOST', 'FROM', 'TO'), help = 'send an e-mail')
+group.add_argument('--slack', dest = 'alerts', action = 'append_const', const = ('slack',), help = 'show a dialog box')
 
 args = parser.parse_args()
 
@@ -201,6 +202,18 @@ for alert in args.alerts or []:
 		except Exception as e:
 			print(e)
 			success = False
+	elif alert[0] == 'slack':
+		try:
+			import slack
+			import os
+			def handle(preamble, hotels):	
+				client = slack.WebClient(token=os.environ['SLACK_API_TOKEN'])
+				response = client.chat_postMessage(
+    				channel='#hiragana',
+    				text="%s\n\n%s" % (preamble, '\n'.join("%s: %s: %s" % (hotel['distance'], hotel['name'], hotel['room']) for hotel in hotels)))
+			alertFns.append(handle)
+		except:
+			print('Slack Failed')
 
 if not success:
 	exit(1)
